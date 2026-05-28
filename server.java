@@ -4,36 +4,26 @@ import java.util.*;
 
 public class Server {
 
-    // Stores all connected clients
-    static Vector<ClientHandler> clients = new Vector<>();
+    static HashMap<String, ClientHandler> clients =
+            new HashMap<>();
 
     public static void main(String[] args) {
 
         try {
 
-            // Server starts on port 5000
-            ServerSocket serverSocket =
+            ServerSocket server =
                     new ServerSocket(5000);
 
-            System.out.println("Server Started...");
-            System.out.println("Waiting for Clients...");
+            System.out.println("Server Started");
 
             while (true) {
 
-                // Accept client connection
                 Socket socket =
-                        serverSocket.accept();
+                        server.accept();
 
-                System.out.println("New Client Connected");
-
-                // Create client thread
                 ClientHandler client =
                         new ClientHandler(socket);
 
-                // Add client to list
-                clients.add(client);
-
-                // Start thread
                 client.start();
             }
 

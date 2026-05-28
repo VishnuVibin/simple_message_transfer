@@ -6,23 +6,23 @@ public class ClientHandler extends Thread {
     Socket socket;
 
     BufferedReader br;
+
     PrintWriter out;
 
-    // Constructor
+    String username;
+
     public ClientHandler(Socket socket) {
 
         try {
 
             this.socket = socket;
 
-            // Receive data from client
             br = new BufferedReader(
                     new InputStreamReader(
                             socket.getInputStream()
                     )
             );
 
-            // Send data to client
             out = new PrintWriter(
                     socket.getOutputStream(),
                     true
@@ -34,47 +34,86 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // Thread starts here
+    public void sendOnlineUsers() {
+
+        String users = "ONLINE:";
+
+        for (String user : Server.clients.keySet()) {
+
+            users += user + ",";
+        }
+
+        for (ClientHandler client :
+                Server.clients.values()) {
+
+            client.out.println(users);
+        }
+    }
+
     public void run() {
 
         try {
 
+            // RECEIVE USERNAME
+            username = br.readLine();
+
+            // STORE CLIENT
+            Server.clients.put(username, this);
+
+            System.out.println(
+                    username + " Connected"
+            );
+
+            // UPDATE ONLINE USERS
+            sendOnlineUsers();
+
             while (true) {
 
-                // Read message from client
-                String message = br.readLine();
+                String msg = br.readLine();
 
-                // If client disconnects
-                if (message == null) {
-
+                if (msg == null)
                     break;
+
+                // FORMAT:
+                // sender:receiver:message
+
+                String[] parts =
+                        msg.split(":", 3);
+
+                String sender =
+                        parts[0];
+
+                String receiver =
+                        parts[1];
+
+                String text =
+                        parts[2];
+
+                // FIND RECEIVER
+                ClientHandler target =
+                        Server.clients.get(receiver);
+
+                // SEND ONLY TO TARGET USER
+                if (target != null) {
+
+                    target.out.println(
+                            sender + ":" + text
+                    );
                 }
+        }} catch (Exception e) {
 
-                System.out.println("Client: " + message);
-
-                // Send message to all connected clients
-                for (ClientHandler client : Server.clients) {
-
-                    // Don't send back to sender
-                    if(client != this) {
-
-                        client.out.println(message);
-                    }
-}
-            }
-
-        } catch (Exception e) {
-
-            System.out.println("Client Disconnected");
+            System.out.println(
+                    username + " Disconnected"
+            );
 
         } finally {
 
+            Server.clients.remove(username);
+
+            sendOnlineUsers();
+
             try {
 
-                // Remove client
-                Server.clients.remove(this);
-
-                // Close socket
                 socket.close();
 
             } catch (Exception e) {

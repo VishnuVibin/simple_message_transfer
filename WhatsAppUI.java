@@ -1,8 +1,10 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.net.*;
 import java.io.*;
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
 
 public class WhatsAppUI {
 
@@ -11,25 +13,56 @@ public class WhatsAppUI {
     JPanel leftPanel;
     JPanel rightPanel;
 
-    JTextArea messages;
+    JPanel onlineUsersPanel;
+
     JTextField input;
+
     JButton send;
+
+    JPanel chatPanel;
+
+    JScrollPane scrollPane;
 
     Socket socket;
 
     BufferedReader br;
+
     PrintWriter out;
-    JPanel chatPanel;
-    JScrollPane scrollPane;
-    String username;    
+
+    String username;
+
+    String currentChatUser = "";
+
+    JLabel chatHeaderName;
+
+    // CHAT HISTORY
+    HashMap<String,
+            ArrayList<String>>
+            chatHistory =
+            new HashMap<>();
+
+    // UNREAD COUNTS
+    HashMap<String, Integer>
+            unreadCounts =
+            new HashMap<>();
+
+    // ONLINE USERS
+    ArrayList<String> onlineUsers =
+            new ArrayList<>();
 
     public WhatsAppUI() {
 
+        username = JOptionPane.showInputDialog(
+                null,
+                "Enter Username"
+        );
+
         try {
 
-            // CONNECT TO SERVER
-            username = JOptionPane.showInputDialog(frame,"Enter Username");
-            socket = new Socket("localhost", 5000);
+            socket = new Socket(
+                    "localhost",
+                    5000
+            );
 
             br = new BufferedReader(
                     new InputStreamReader(
@@ -42,7 +75,8 @@ public class WhatsAppUI {
                     true
             );
 
-            System.out.println("Connected To Server");
+            // SEND USERNAME
+            out.println(username);
 
         } catch (Exception e) {
 
@@ -50,20 +84,26 @@ public class WhatsAppUI {
         }
 
         // FRAME
-        frame = new JFrame("WhatsApp Clone");
+        frame = new JFrame(
+                "WhatsApp Clone"
+        );
 
         frame.setSize(1000, 650);
 
         frame.setLayout(null);
 
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(
+                JFrame.EXIT_ON_CLOSE
+        );
 
         // LEFT PANEL
         leftPanel = new JPanel();
 
         leftPanel.setBounds(0, 0, 300, 650);
 
-        leftPanel.setBackground(new Color(17, 27, 33));
+        leftPanel.setBackground(
+                new Color(17, 27, 33)
+        );
 
         leftPanel.setLayout(null);
 
@@ -72,13 +112,18 @@ public class WhatsAppUI {
 
         topBar.setBounds(0, 0, 300, 70);
 
-        topBar.setBackground(new Color(32, 44, 51));
+        topBar.setBackground(
+                new Color(32, 44, 51)
+        );
 
         topBar.setLayout(null);
 
-        JLabel profile = new JLabel("V");
+        JLabel profile = new JLabel(
+                username.substring(0,1)
+                        .toUpperCase()
+        );
 
-        profile.setBounds(20, 15, 40, 40);
+        profile.setBounds(20,15,40,40);
 
         profile.setOpaque(true);
 
@@ -86,18 +131,29 @@ public class WhatsAppUI {
 
         profile.setForeground(Color.WHITE);
 
-        profile.setHorizontalAlignment(SwingConstants.CENTER);
+        profile.setHorizontalAlignment(
+                SwingConstants.CENTER
+        );
 
-        profile.setFont(new Font("Arial", Font.BOLD, 20));
+        profile.setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        20
+                )
+        );
 
         topBar.add(profile);
 
         // SEARCH BAR
-        JTextField search = new JTextField();
+        JTextField search =
+                new JTextField();
 
-        search.setBounds(15, 80, 270, 35);
+        search.setBounds(15,80,270,35);
 
-        search.setBackground(new Color(32, 44, 51));
+        search.setBackground(
+                new Color(32,44,51)
+        );
 
         search.setForeground(Color.WHITE);
 
@@ -105,330 +161,70 @@ public class WhatsAppUI {
 
         search.setBorder(
                 BorderFactory.createEmptyBorder(
-                        5, 10, 5, 10
+                        5,10,5,10
                 )
         );
 
-        search.setText("Search or start new chat");
-
-        // CHAT LIST
-        JPanel chat1 = createChat(
-                "Arun",
-                "Hey bro!",
-                130
+        search.setText(
+                "Search or start new chat"
         );
 
-        JPanel chat2 = createChat(
-                "Kumar",
-                "Project completed?",
-                210
+        // ONLINE USERS PANEL
+        onlineUsersPanel = new JPanel();
+
+        onlineUsersPanel.setLayout(
+                new BoxLayout(
+                        onlineUsersPanel,
+                        BoxLayout.Y_AXIS
+                )
         );
 
-        JPanel chat3 = createChat(
-                "Rahul",
-                "Call me",
-                290
+        onlineUsersPanel.setBackground(
+                new Color(17,27,33)
+        );
+
+        JScrollPane userScroll =
+                new JScrollPane(
+                        onlineUsersPanel
+                );
+
+        userScroll.setBounds(
+                0,130,300,500
         );
 
         leftPanel.add(topBar);
 
         leftPanel.add(search);
 
-        leftPanel.add(chat1);
-
-        leftPanel.add(chat2);
-
-        leftPanel.add(chat3);
+        leftPanel.add(userScroll);
 
         // RIGHT PANEL
         rightPanel = new JPanel();
 
-        rightPanel.setBounds(300, 0, 700, 650);
-
-        rightPanel.setBackground(new Color(11, 20, 26));
-
-        rightPanel.setLayout(null);
-
-        // CHAT HEADER
-        JPanel header = new JPanel();
-
-        header.setBounds(0, 0, 700, 70);
-
-        header.setBackground(new Color(32, 44, 51));
-
-        header.setLayout(null);
-
-        JLabel dp = new JLabel("A");
-
-        dp.setBounds(20, 15, 40, 40);
-
-        dp.setOpaque(true);
-
-        dp.setBackground(Color.GRAY);
-
-        dp.setForeground(Color.WHITE);
-
-        dp.setHorizontalAlignment(SwingConstants.CENTER);
-
-        dp.setFont(new Font("Arial", Font.BOLD, 20));
-
-        JLabel name = new JLabel("Chat Room");
-
-        name.setBounds(80, 20, 200, 30);
-
-        name.setForeground(Color.WHITE);
-
-        name.setFont(new Font("Arial", Font.BOLD, 20));
-
-        header.add(dp);
-
-        header.add(name);
-
-        // MESSAGE AREA
-        chatPanel = new JPanel();
-
-        chatPanel.setLayout(
-                new BoxLayout(
-                        chatPanel,
-                        BoxLayout.Y_AXIS
-                )
+        rightPanel.setBounds(
+                300,0,700,650
         );
 
-        chatPanel.setBackground(
+        rightPanel.setBackground(
                 new Color(11,20,26)
         );
 
-        scrollPane = new JScrollPane(chatPanel);
+        rightPanel.setLayout(null);
 
-        scrollPane.setBounds(20,90,660,430);
+        // HEADER
+        JPanel header = new JPanel();
 
-        scrollPane.setBorder(null);
+        header.setBounds(0,0,700,70);
 
-        scrollPane.getVerticalScrollBar()
-                .setUnitIncrement(16);
-
-        rightPanel.add(scrollPane);
-
-        // SCROLL PANE
-        JScrollPane scroll = new JScrollPane(messages);
-
-        scroll.setBounds(20, 90, 660, 430);
-
-        // INPUT FIELD
-        input = new JTextField();
-
-        input.setBounds(20, 540, 540, 40);
-
-        input.setBackground(new Color(32, 44, 51));
-
-        input.setForeground(Color.WHITE);
-
-        input.setCaretColor(Color.WHITE);
-
-        input.setBorder(
-                BorderFactory.createEmptyBorder(
-                        5, 10, 5, 10
-                )
-        );
-
-        input.setFont(
-                new Font(
-                        "Arial",
-                        Font.PLAIN,
-                        16
-                )
-        );
-
-        // SEND BUTTON
-        send = new JButton("Send");
-
-        send.setBounds(580, 540, 100, 40);
-
-        send.setBackground(new Color(0, 168, 132));
-
-        send.setForeground(Color.WHITE);
-
-        send.setFont(
-                new Font(
-                        "Arial",
-                        Font.BOLD,
-                        15
-                )
-        );
-
-        send.setFocusPainted(false);
-
-        // SEND MESSAGE
-        send.addActionListener(e -> sendMessage());
-
-        // ENTER KEY SEND
-        input.addActionListener(e -> sendMessage());
-
-        rightPanel.add(header);
-
-        rightPanel.add(scroll);
-
-        rightPanel.add(input);
-
-        rightPanel.add(send);
-
-        frame.add(leftPanel);
-
-        frame.add(rightPanel);
-
-        frame.setVisible(true);
-
-        // START RECEIVING
-        receiveMessages();
-    }
-
-    public void addMessage(
-        String message,
-        boolean isSender
-) {
-
-    JPanel wrapper = new JPanel(
-            new FlowLayout(
-                    isSender ?
-                            FlowLayout.RIGHT :
-                            FlowLayout.LEFT
-            )
-    );
-
-    wrapper.setBackground(
-            new Color(11,20,26)
-    );
-
-    JLabel msg = new JLabel(
-            "<html><p style='width: 200px'>"
-                    + message +
-                    "</p></html>"
-    );
-
-    msg.setOpaque(true);
-
-    msg.setFont(
-            new Font(
-                    "Arial",
-                    Font.PLAIN,
-                    15
-            )
-    );
-
-    msg.setBorder(
-            BorderFactory.createEmptyBorder(
-                    10,15,10,15
-            )
-    );
-
-    if(isSender){
-
-        msg.setBackground(
-                new Color(0,168,132)
-        );
-
-        msg.setForeground(Color.WHITE);
-
-    } else {
-
-        msg.setBackground(
+        header.setBackground(
                 new Color(32,44,51)
         );
 
-        msg.setForeground(Color.WHITE);
-    }
+        header.setLayout(null);
 
-    wrapper.add(msg);
+        JLabel dp = new JLabel("C");
 
-    chatPanel.add(wrapper);
-
-    chatPanel.revalidate();
-
-    SwingUtilities.invokeLater(() -> {
-
-        JScrollBar vertical =
-                scrollPane.getVerticalScrollBar();
-
-        vertical.setValue(
-                vertical.getMaximum()
-        );
-    });
-}
-
-    // SEND METHOD
-    public void sendMessage() {
-
-    String msg = input.getText();
-
-    if(!msg.isEmpty()) {
-
-        out.println(username + ":" + msg);
-
-        input.setText("");
-    }
-}
-
-    // RECEIVE METHOD
-    public void receiveMessages() {
-
-    Thread thread = new Thread(() -> {
-
-        try {
-
-            while (true) {
-
-                String msg = br.readLine();
-
-                if(msg == null)
-                    break;
-
-                // Split username and message
-                String[] parts = msg.split(":", 2);
-
-                String sender = parts[0];
-
-                String text = parts[1];
-
-                // If my own message
-                if(sender.equals(username)) {
-
-                    addMessage(text, true);
-
-                } else {
-
-                    addMessage(sender + ": " + text, false);
-                }
-            }
-
-        } catch (Exception e) {
-
-            System.out.println("Disconnected");
-        }
-    });
-
-    thread.start();
-}
-
-    // CHAT PANEL CREATOR
-    static JPanel createChat(
-            String name,
-            String message,
-            int y
-    ) {
-
-        JPanel panel = new JPanel();
-
-        panel.setBounds(0, y, 300, 70);
-
-        panel.setBackground(new Color(17, 27, 33));
-
-        panel.setLayout(null);
-
-        JLabel dp = new JLabel(
-                name.substring(0, 1)
-        );
-
-        dp.setBounds(15, 15, 40, 40);
+        dp.setBounds(20,15,40,40);
 
         dp.setOpaque(true);
 
@@ -444,48 +240,481 @@ public class WhatsAppUI {
                 new Font(
                         "Arial",
                         Font.BOLD,
-                        18
+                        20
                 )
         );
 
-        JLabel user = new JLabel(name);
+        chatHeaderName =
+                new JLabel("Select User");
 
-        user.setBounds(70, 10, 150, 25);
+        chatHeaderName.setBounds(
+                80,20,300,30
+        );
 
-        user.setForeground(Color.WHITE);
+        chatHeaderName.setForeground(
+                Color.WHITE
+        );
 
-        user.setFont(
+        chatHeaderName.setFont(
                 new Font(
                         "Arial",
                         Font.BOLD,
+                        20
+                )
+        );
+
+        header.add(dp);
+
+        header.add(chatHeaderName);
+
+        // CHAT PANEL
+        chatPanel = new JPanel();
+
+        chatPanel.setLayout(
+                new BoxLayout(
+                        chatPanel,
+                        BoxLayout.Y_AXIS
+                )
+        );
+
+        chatPanel.setBackground(
+                new Color(11,20,26)
+        );
+
+        scrollPane =
+                new JScrollPane(chatPanel);
+
+        scrollPane.setBounds(
+                20,90,660,430
+        );
+
+        scrollPane.setBorder(null);
+
+        // INPUT
+        input = new JTextField();
+
+        input.setBounds(
+                20,540,540,40
+        );
+
+        input.setBackground(
+                new Color(32,44,51)
+        );
+
+        input.setForeground(Color.WHITE);
+
+        input.setCaretColor(Color.WHITE);
+
+        input.setBorder(
+                BorderFactory.createEmptyBorder(
+                        5,10,5,10
+                )
+        );
+
+        input.setFont(
+                new Font(
+                        "Arial",
+                        Font.PLAIN,
                         16
                 )
         );
 
-        JLabel msg = new JLabel(message);
+        // SEND BUTTON
+        send = new JButton("Send");
 
-        msg.setBounds(70, 35, 180, 20);
+        send.setBounds(
+                580,540,100,40
+        );
 
-        msg.setForeground(Color.LIGHT_GRAY);
+        send.setBackground(
+                new Color(0,168,132)
+        );
+
+        send.setForeground(Color.WHITE);
+
+        send.setFocusPainted(false);
+
+        send.addActionListener(
+                e -> sendMessage()
+        );
+
+        input.addActionListener(
+                e -> sendMessage()
+        );
+
+        rightPanel.add(header);
+
+        rightPanel.add(scrollPane);
+
+        rightPanel.add(input);
+
+        rightPanel.add(send);
+
+        frame.add(leftPanel);
+
+        frame.add(rightPanel);
+
+        frame.setVisible(true);
+
+        receiveMessages();
+    }
+
+    // SEND MESSAGE
+    public void sendMessage() {
+
+        String msg = input.getText();
+
+        if (!msg.isEmpty()
+                &&
+                !currentChatUser.isEmpty()) {
+
+            addMessage(
+                    "You: " + msg,
+                    true
+            );
+
+            // SAVE HISTORY
+            chatHistory
+                    .computeIfAbsent(
+                            currentChatUser,
+                            k -> new ArrayList<>()
+                    )
+                    .add("You: " + msg);
+
+            out.println(
+                    username
+                            + ":"
+                            + currentChatUser
+                            + ":"
+                            + msg
+            );
+
+            input.setText("");
+        }
+    }
+
+    // RECEIVE MESSAGES
+    public void receiveMessages() {
+
+        Thread thread = new Thread(() -> {
+
+            try {
+
+                while (true) {
+
+                    String msg =
+                            br.readLine();
+
+                    if (msg == null)
+                        break;
+
+                    // ONLINE USERS
+                    if(msg.startsWith(
+                            "ONLINE:"
+                    )){
+
+                        updateOnlineUsers(msg);
+
+                        continue;
+                    }
+
+                    String[] parts =
+                            msg.split(":",2);
+
+                    String sender =
+                            parts[0];
+
+                    String text =
+                            parts[1];
+
+                    // SAVE HISTORY
+                    chatHistory
+                            .computeIfAbsent(
+                                    sender,
+                                    k -> new ArrayList<>()
+                            )
+                            .add(sender + ": " + text);
+
+                    if(currentChatUser.equals(sender)) {
+
+                        addMessage(
+                                sender + ": " + text,
+                                false
+                        );
+
+                    } else {
+
+                        unreadCounts.put(
+                                sender,
+                                unreadCounts.getOrDefault(
+                                        sender,
+                                        0
+                                ) + 1
+                        );
+
+                        updateOnlineUsersListUI();
+                    }
+                }
+
+            } catch (Exception e) {
+
+                System.out.println(
+                        "Disconnected"
+                );
+            }
+        });
+
+        thread.start();
+    }
+
+    // UPDATE ONLINE USERS
+    public void updateOnlineUsers(
+            String users
+    ){
+
+        String data =
+                users.replace(
+                        "ONLINE:",
+                        ""
+                );
+
+        String[] userList =
+                data.split(",");
+
+        onlineUsers.clear();
+
+        for(String user : userList){
+
+            if(user.trim().isEmpty())
+                continue;
+
+            if(user.equals(username))
+                continue;
+
+            onlineUsers.add(user);
+
+            unreadCounts.putIfAbsent(
+                    user,
+                    0
+            );
+        }
+
+        updateOnlineUsersListUI();
+    }
+
+    // REFRESH USER LIST
+    public void updateOnlineUsersListUI(){
+
+        onlineUsersPanel.removeAll();
+
+        for(String user : onlineUsers){
+
+            JPanel userPanel =
+                    new JPanel();
+
+            userPanel.setLayout(
+                    new BorderLayout()
+            );
+
+            userPanel.setMaximumSize(
+                    new Dimension(
+                            280,
+                            50
+                    )
+            );
+
+            userPanel.setBackground(
+                    new Color(17,27,33)
+            );
+
+            int count =
+                    unreadCounts.getOrDefault(
+                            user,
+                            0
+                    );
+
+            String text =
+                    "🟢 " + user;
+
+            if(count > 0){
+
+                text += " (" + count + ")";
+            }
+
+            JLabel label =
+                    new JLabel(text);
+
+            label.setForeground(
+                    Color.WHITE
+            );
+
+            label.setFont(
+                    new Font(
+                            "Arial",
+                            Font.BOLD,
+                            16
+                    )
+            );
+
+            label.setBorder(
+                    BorderFactory
+                            .createEmptyBorder(
+                                    10,10,10,10
+                            )
+            );
+
+            userPanel.add(label);
+
+            // CLICK USER
+            userPanel.addMouseListener(
+                    new java.awt.event
+                            .MouseAdapter() {
+
+                        public void mouseClicked(
+                                java.awt.event
+                                        .MouseEvent evt
+                        ) {
+
+                            currentChatUser =
+                                    user;
+
+                            chatHeaderName
+                                    .setText(user);
+
+                            unreadCounts.put(
+                                    user,
+                                    0
+                            );
+
+                            loadChat(user);
+
+                            updateOnlineUsersListUI();
+                        }
+                    }
+            );
+
+            onlineUsersPanel.add(
+                    userPanel
+            );
+        }
+
+        onlineUsersPanel.revalidate();
+
+        onlineUsersPanel.repaint();
+    }
+
+    // LOAD CHAT
+    public void loadChat(String user){
+
+        chatPanel.removeAll();
+
+        if(chatHistory.containsKey(user)) {
+
+            for(String oldMsg :
+                    chatHistory.get(user)) {
+
+                boolean isMine =
+                        oldMsg.startsWith("You:");
+
+                addMessage(
+                        oldMsg,
+                        isMine
+                );
+            }
+        }
+
+        chatPanel.revalidate();
+
+        chatPanel.repaint();
+    }
+
+    // ADD MESSAGE BUBBLE
+    public void addMessage(
+            String message,
+            boolean isSender
+    ){
+
+        String time =
+                LocalTime.now()
+                        .format(
+                                DateTimeFormatter
+                                        .ofPattern(
+                                                "hh:mm a"
+                                        )
+                        );
+
+        JPanel wrapper =
+                new JPanel(
+                        new FlowLayout(
+                                isSender ?
+                                        FlowLayout.RIGHT :
+                                        FlowLayout.LEFT
+                        )
+                );
+
+        wrapper.setBackground(
+                new Color(11,20,26)
+        );
+
+        JLabel msg =
+                new JLabel(
+                        "<html><p style='width: 200px'>"
+                                + message
+                                + "<br><br><small>"
+                                + time
+                                + "</small></p></html>"
+                );
+
+        msg.setOpaque(true);
+
+        msg.setForeground(Color.WHITE);
 
         msg.setFont(
                 new Font(
                         "Arial",
                         Font.PLAIN,
-                        13
+                        15
                 )
         );
 
-        panel.add(dp);
+        msg.setBorder(
+                BorderFactory
+                        .createEmptyBorder(
+                                10,15,10,15
+                        )
+        );
 
-        panel.add(user);
+        if(isSender){
 
-        panel.add(msg);
+            msg.setBackground(
+                    new Color(0,168,132)
+            );
 
-        return panel;
+        } else {
+
+            msg.setBackground(
+                    new Color(32,44,51)
+            );
+        }
+
+        wrapper.add(msg);
+
+        chatPanel.add(wrapper);
+
+        chatPanel.revalidate();
+
+        SwingUtilities.invokeLater(() -> {
+
+            JScrollBar vertical =
+                    scrollPane
+                            .getVerticalScrollBar();
+
+            vertical.setValue(
+                    vertical.getMaximum()
+            );
+        });
     }
 
-    // MAIN METHOD
     public static void main(String[] args) {
 
         new WhatsAppUI();
