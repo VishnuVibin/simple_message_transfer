@@ -1,32 +1,85 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Public Chat App</title>
+    <title>PulseChat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="container">
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
 
-    <h1>Public Chat Room</h1>
+    <div class="login-box">
 
-    <input type="text"
-           id="username"
-           placeholder="Enter your name">
+        <p class="eyebrow">Live group chat</p>
+        <h2>Welcome to PulseChat</h2>
+        <p class="tagline">A brighter, faster chat experience with a fresh look.</p>
 
-    <div id="messages"></div>
+        <input type="text"
+               id="usernameInput"
+               placeholder="Choose your name">
 
-    <input type="text"
-           id="message"
-           placeholder="Type a message">
+        <button onclick="joinChat()">
+            Enter chat
+        </button>
 
-    <button onclick="sendMessage()">
-        Send
-    </button>
+    </div>
+
+</div>
+
+<!-- CHAT APP -->
+<div class="app" id="chatApp" style="display:none;">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+
+        <div class="top-bar">
+            <h3 id="myName">User</h3>
+        </div>
+
+        <div class="search-box">
+            <input type="text"
+                   placeholder="Search user">
+        </div>
+
+        <div id="usersList"
+             class="users-list">
+        </div>
+
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+        <div class="chat-header">
+            <h3 id="chatUser">
+                Public Chat Room
+            </h3>
+        </div>
+
+        <div id="messages"
+             class="messages">
+        </div>
+
+        <div class="bottom-bar">
+
+            <input type="text"
+                   id="message"
+                   placeholder="Type message">
+
+            <button onclick="sendMessage()">
+                Send
+            </button>
+
+        </div>
+
+    </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
 
 <script src="app.js"></script>

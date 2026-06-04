@@ -4,13 +4,19 @@ public class ChatMessage {
 
     private String sender;
     private String content;
+    private String type;
+    private String recipient;
 
     public ChatMessage() {
     }
 
-    public ChatMessage(String sender, String content) {
+    public ChatMessage(String sender,
+                       String content,
+                       String type) {
+
         this.sender = sender;
         this.content = content;
+        this.type = type;
     }
 
     public String getSender() {
@@ -27,5 +33,21 @@ public class ChatMessage {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getRecipient() {
+        return recipient;
+    }
+
+    public void setRecipient(String recipient) {
+        this.recipient = recipient;
     }
 }
