@@ -4,6 +4,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.util.Set;
+
 @Controller
 public class ChatMessageController {
 
@@ -19,28 +21,21 @@ public class ChatMessageController {
     public void sendMessage(
             ChatMessage message) {
 
-        if (message.getType() != null
-                && message.getType().equals("PRIVATE")) {
-
-            if (message.getRecipient() != null
-                    && !message.getRecipient().isBlank()) {
-
-                messagingTemplate.convertAndSend(
-                        "/topic/private-" + message.getRecipient(),
-                        message
-                );
-            }
-
-            messagingTemplate.convertAndSend(
-                    "/topic/private-" + message.getSender(),
-                    message
-            );
+        if (message.getType() == null
+                || !"PRIVATE".equals(message.getType())
+                || message.getRecipient() == null
+                || message.getRecipient().isBlank()) {
 
             return;
         }
 
         messagingTemplate.convertAndSend(
-                "/topic/messages",
+                "/topic/private-" + message.getRecipient(),
+                message
+        );
+
+        messagingTemplate.convertAndSend(
+                "/topic/private-" + message.getSender(),
                 message
         );
     }
@@ -54,16 +49,68 @@ public class ChatMessageController {
             return;
         }
 
-        UserStorage.users.add(
-                message.getSender()
-        );
+        UserStorage.addUser(message.getSender());
+        broadcastUsers();
+    }
+
+    @MessageMapping("/admin/delete")
+    public void deleteUser(AdminAction action) {
+
+        if (!UserStorage.isAdmin(action.getRequester())
+                || action.getTargetUser() == null
+                || action.getTargetUser().isBlank()) {
+
+            return;
+        }
+
+        String targetUser = action.getTargetUser().trim();
+
+        UserStorage.removeUser(targetUser);
+        notifyDeletedUser(targetUser);
+        broadcastUsers();
+    }
+
+    @MessageMapping("/admin/promote")
+    public void promoteUser(AdminAction action) {
+
+        if (!UserStorage.isAdmin(action.getRequester())
+                || action.getTargetUser() == null
+                || action.getTargetUser().isBlank()) {
+
+            return;
+        }
+
+        UserStorage.setAdmin(action.getTargetUser());
+        broadcastUsers();
+    }
+
+    private void notifyDeletedUser(String targetUser) {
+
+        String payload = "{\"action\":\"DELETE\",\"targetUser\":\"" + escapeJson(targetUser) + "\"}";
 
         messagingTemplate.convertAndSend(
-                "/topic/users",
-                String.join(
-                        ",",
-                        UserStorage.users
-                )
+                "/queue/" + targetUser,
+                payload
         );
+    }
+
+    private void broadcastUsers() {
+
+        String payload = UserStorage.toJson();
+
+        for (String user : Set.copyOf(UserStorage.users)) {
+
+            messagingTemplate.convertAndSend(
+                    "/queue/" + user,
+                    payload
+            );
+        }
+    }
+
+    private String escapeJson(String value) {
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
     }
 }
