@@ -40,5 +40,6 @@ class ChatMessageControllerTest {
 
         assertTrue(destinationCaptor.getAllValues().contains("/queue/alice"));
         assertTrue(payloadCaptor.getAllValues().stream().anyMatch(payload -> payload.contains("\"action\":\"DELETE\"")));
+        assertTrue(payloadCaptor.getAllValues().stream().anyMatch(payload -> payload.contains("\"targetUser\":\"alice\"")));
     }
 }
