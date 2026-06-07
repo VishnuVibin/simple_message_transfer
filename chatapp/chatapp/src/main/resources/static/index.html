@@ -20,8 +20,16 @@
                id="usernameInput"
                placeholder="Choose your name">
 
-        <button onclick="joinChat()">
-            Enter chat
+        <input type="password"
+               id="passwordInput"
+               placeholder="Enter your password">
+
+        <button onclick="joinChat('ADMIN')">
+            Admin Login
+        </button>
+
+        <button onclick="joinChat('USER')">
+            User Login
         </button>
 
     </div>
@@ -40,11 +48,28 @@
 
         <div class="search-box">
             <input type="text"
+                   id="searchUserInput"
+                   autocomplete="off"
                    placeholder="Search user">
+            <div id="suggestionBox"
+                 class="suggestion-box"></div>
         </div>
 
         <div id="usersList"
              class="users-list">
+        </div>
+
+        <div id="adminPanel"
+             class="admin-panel"
+             style="display:none;">
+            <button type="button"
+                    id="deleteUserBtn">
+                Delete selected user
+            </button>
+            <button type="button"
+                    id="makeAdminBtn">
+                Make selected user admin
+            </button>
         </div>
 
     </div>
@@ -53,9 +78,20 @@
     <div class="right-panel">
 
         <div class="chat-header">
-            <h3 id="chatUser">
-                Public Chat Room
-            </h3>
+            <div>
+                <h3 id="chatUser">
+                    Private Chat Room
+                </h3>
+                <input type="hidden"
+                       id="recipientInput">
+            </div>
+            <button type="button"
+                    id="deleteHeaderBtn"
+                    class="icon-btn"
+                    title="Delete selected user"
+                    aria-label="Delete selected user">
+                🗑️
+            </button>
         </div>
 
         <div id="messages"
