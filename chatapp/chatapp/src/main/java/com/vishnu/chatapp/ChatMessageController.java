@@ -21,23 +21,33 @@ public class ChatMessageController {
     public void sendMessage(
             ChatMessage message) {
 
-        if (message.getType() == null
-                || !"PRIVATE".equals(message.getType())
-                || message.getRecipient() == null
-                || message.getRecipient().isBlank()) {
-
+        if (message.getType() == null) {
             return;
         }
 
-        messagingTemplate.convertAndSend(
-                "/topic/private-" + message.getRecipient(),
-                message
-        );
+        if ("PUBLIC".equals(message.getType())) {
+            messagingTemplate.convertAndSend(
+                    "/topic/public",
+                    message
+            );
+        } else if ("PRIVATE".equals(message.getType())) {
+            if (message.getRecipient() == null
+                    || message.getRecipient().isBlank()) {
+                return;
+            }
 
-        messagingTemplate.convertAndSend(
-                "/topic/private-" + message.getSender(),
-                message
-        );
+            messagingTemplate.convertAndSendToUser(
+                    message.getRecipient(),
+                    "/queue/private",
+                    message
+            );
+
+            messagingTemplate.convertAndSendToUser(
+                    message.getSender(),
+                    "/queue/private",
+                    message
+            );
+        }
     }
 
     @MessageMapping("/join")

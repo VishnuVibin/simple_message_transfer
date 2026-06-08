@@ -14,6 +14,10 @@ let currentAdmin = null;
 
 const displayedMessageIds = new Set();
 
+const messageHistory = [];
+
+const unreadCounts = {};
+
 function showChatScreen() {
 
     document.getElementById(
@@ -191,6 +195,17 @@ function selectUser(user) {
         "chatUser"
     ).textContent =
         "Chat with " + user;
+
+    const publicBtn = document.getElementById("publicChatBtn");
+    if (publicBtn) {
+        publicBtn.style.background = "linear-gradient(135deg, #1e1b4b, #311042)";
+        publicBtn.style.borderColor = "#8b5cf6";
+    }
+
+    unreadCounts[user] = 0;
+
+    redrawMessages();
+    filterUsers();
 }
 
 function updateAdminPanel() {
@@ -275,12 +290,23 @@ function filterUsers() {
                 "button"
             );
 
-        button.textContent = user;
+        const unreadCount = unreadCounts[user] || 0;
+        if (unreadCount > 0) {
+            button.innerHTML = `${user} <span class="unread-badge" style="background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:0.75rem; margin-left:8px; font-weight:bold; vertical-align:middle;">${unreadCount}</span>`;
+        } else {
+            button.textContent = user;
+        }
+
         button.className = "user-chip";
         button.onclick = function () {
 
             selectUser(user);
         };
+
+        if (user === selectedRecipient) {
+            button.style.background = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
+            button.style.borderColor = "#60a5fa";
+        }
 
         usersList.appendChild(button);
     });
@@ -324,6 +350,84 @@ function promoteSelectedUser() {
     );
 }
 
+function selectPublicChat() {
+    selectedRecipient = "";
+    selectedAdminTarget = "";
+
+    document.getElementById(
+        "recipientInput"
+    ).value = "";
+
+    document.getElementById(
+        "chatUser"
+    ).textContent =
+        "🌐 Public Chat Room";
+
+    const publicBtn = document.getElementById("publicChatBtn");
+    if (publicBtn) {
+        publicBtn.style.background = "linear-gradient(135deg, #8b5cf6, #22d3ee)";
+        publicBtn.style.borderColor = "#a78bfa";
+    }
+
+    redrawMessages();
+    filterUsers();
+}
+
+function redrawMessages() {
+    const messagesContainer = document.getElementById("messages");
+    messagesContainer.innerHTML = "";
+    displayedMessageIds.clear();
+
+    messageHistory.forEach(msg => {
+        appendMessageToUI(msg);
+    });
+}
+
+function appendMessageToUI(msg) {
+    const currentIsPublic = (selectedRecipient === "");
+
+    if (currentIsPublic) {
+        if (msg.type !== "PUBLIC") {
+            return;
+        }
+    } else {
+        if (msg.type !== "PRIVATE") {
+            return;
+        }
+        const isFromRecipient = String(msg.sender).trim() === String(selectedRecipient).trim();
+        const isToRecipient = String(msg.recipient).trim() === String(selectedRecipient).trim();
+        const isFromMe = String(msg.sender).trim() === String(username).trim();
+        const isToMe = String(msg.recipient).trim() === String(username).trim();
+
+        const isExchangedWithRecipient = (isFromMe && isToRecipient) || (isFromRecipient && isToMe);
+
+        if (!isExchangedWithRecipient) {
+            return;
+        }
+    }
+
+    if (msg.clientId) {
+        if (displayedMessageIds.has(msg.clientId)) {
+            return;
+        }
+        displayedMessageIds.add(msg.clientId);
+    }
+
+    const messages = document.getElementById("messages");
+    const div = document.createElement("div");
+
+    const isSentByMe = String(msg.sender).trim() === String(username).trim();
+
+    div.className = isSentByMe ? "message sent" : "message received";
+
+    const label = msg.type === "PRIVATE" ? "Private" : "Public";
+
+    div.innerHTML = `<b>${msg.sender}</b> <small>(${label})</small><br>${msg.content}`;
+
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+
 function connectSocket() {
 
     const socket =
@@ -332,14 +436,27 @@ function connectSocket() {
     stompClient =
         Stomp.over(socket);
 
-    stompClient.connect({}, function () {
+    stompClient.connect({ username: username }, function () {
 
         console.log(
             "Connected Successfully"
         );
 
         stompClient.subscribe(
-            "/topic/private-" + username,
+            "/topic/public",
+            function (message) {
+
+                const msg =
+                    JSON.parse(
+                        message.body
+                    );
+
+                displayMessage(msg);
+            }
+        );
+
+        stompClient.subscribe(
+            "/user/queue/private",
             function (message) {
 
                 const msg =
@@ -368,6 +485,8 @@ function connectSocket() {
                 sender: username
             })
         );
+
+        selectPublicChat();
     });
 }
 
@@ -394,38 +513,30 @@ function sendMessage() {
         (recipientInput.value || selectedRecipient || "")
             .trim();
 
-    if (recipient === "") {
-
-        alert("Select a user to chat privately with");
-
-        return;
-    }
-
-    selectedRecipient = recipient;
-
-    document.getElementById(
-        "chatUser"
-    ).textContent =
-        "Chat with " + recipient;
-
     const clientMessageId =
         "local-" +
         Date.now().toString() +
         "-" +
         Math.random().toString(36).slice(2);
 
-    const message = {
+    let message;
 
-        sender: username,
-
-        content: content,
-
-        type: "PRIVATE",
-
-        recipient: recipient,
-
-        clientId: clientMessageId
-    };
+    if (recipient === "") {
+        message = {
+            sender: username,
+            content: content,
+            type: "PUBLIC",
+            clientId: clientMessageId
+        };
+    } else {
+        message = {
+            sender: username,
+            content: content,
+            type: "PRIVATE",
+            recipient: recipient,
+            clientId: clientMessageId
+        };
+    }
 
     stompClient.send(
         "/app/send",
@@ -451,47 +562,14 @@ function displayMessage(msg) {
         }
     }
 
-    if (msg.clientId) {
+    messageHistory.push(msg);
 
-        if (displayedMessageIds.has(msg.clientId)) {
-
-            return;
-        }
-
-        displayedMessageIds.add(msg.clientId);
+    if (msg.type === "PRIVATE" && msg.sender !== username && msg.sender !== selectedRecipient) {
+        unreadCounts[msg.sender] = (unreadCounts[msg.sender] || 0) + 1;
+        filterUsers();
     }
 
-    const messages =
-        document.getElementById(
-            "messages"
-        );
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-    const isSentByMe =
-        String(msg.sender).trim() ===
-        String(username).trim();
-
-    div.className =
-        isSentByMe
-            ? "message sent"
-            : "message received";
-
-    const label =
-        msg.type === "PRIVATE"
-            ? "Private"
-            : "Public";
-
-    div.innerHTML =
-        `<b>${msg.sender}</b> <small>(${label})</small><br>${msg.content}`;
-
-    messages.appendChild(div);
-
-    messages.scrollTop =
-        messages.scrollHeight;
+    appendMessageToUI(msg);
 }
 
 // Press Enter to Send
